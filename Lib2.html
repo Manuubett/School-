@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📚 Book Issuing & Returning</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+  <div class="container mt-4">
+    <h2 class="text-center mb-4">📖 Book Issuing & Returning</h2>
+
+    <!-- Issue Book Form -->
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">Issue Book</div>
+      <div class="card-body">
+        <form id="issueForm">
+          <div class="mb-3">
+            <label class="form-label">Select Student</label>
+            <select id="studentSelect" class="form-control" required></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Select Book</label>
+            <select id="bookSelect" class="form-control" required></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Issue Date</label>
+            <input type="date" id="issueDate" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-success">Issue Book</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Return Book Form -->
+    <div class="card mb-4">
+      <div class="card-header bg-warning">Return Book</div>
+      <div class="card-body">
+        <form id="returnForm">
+          <div class="mb-3">
+            <label class="form-label">Select Issued Book</label>
+            <select id="issuedSelect" class="form-control" required></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Return Date</label>
+            <input type="date" id="returnDate" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-danger">Return Book</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Issued Books Table -->
+    <div class="card">
+      <div class="card-header bg-info text-white">Currently Issued Books</div>
+      <div class="card-body">
+        <table class="table table-bordered table-striped">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Email</th>
+              <th>Book</th>
+              <th>Issue Date</th>
+              <th>Return Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="issuedTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { 
+      getFirestore, collection, getDocs, addDoc, updateDoc, doc, getDoc 
+    } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdabXqlBQ-6yVNJKdu8Zhb9Cm_-59_u24",
+      authDomain: "bett-294a2.firebaseapp.com",
+      projectId: "bett-294a2",
+      storageBucket: "bett-294a2.appspot.com",
+      messagingSenderId: "1055511650032",
+      appId: "1:1055511650032:web:7e0f9c28e58515f549ac35"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const studentSelect = document.getElementById("studentSelect");
+    const bookSelect = document.getElementById("bookSelect");
+    const issuedSelect = document.getElementById("issuedSelect");
+    const issuedTable = document.getElementById("issuedTable");
+
+    // Load Students
+    async function loadStudents() {
+      const snap = await getDocs(collection(db, "students"));
+      studentSelect.innerHTML = "";
+      snap.forEach(d => {
+        const s = d.data();
+        studentSelect.innerHTML += `<option value="${s.email}">${s.name} (${s.email})</option>`;
+      });
+    }
+
+    // Load Available Books
+    async function loadBooks() {
+      const snap = await getDocs(collection(db, "books"));
+      bookSelect.innerHTML = "";
+      snap.forEach(d => {
+        const b = d.data();
+        if (b.status !== "Issued") {
+          bookSelect.innerHTML += `<option value="${d.id}">${b.title} (${b.isbn})</option>`;
+        }
+      });
+    }
+
+    // Load Issued Books
+    async function loadIssuedBooks() {
+      const snap = await getDocs(collection(db, "issuedBooks"));
+      issuedSelect.innerHTML = "";
+      issuedTable.innerHTML = "";
+      snap.forEach(d => {
+        const ib = d.data();
+        if (ib.status === "Issued") {
+          issuedSelect.innerHTML += `<option value="${d.id}">${ib.bookTitle} → ${ib.studentName}</option>`;
+        }
+        issuedTable.innerHTML += `
+          <tr>
+            <td>${ib.studentName}</td>
+            <td>${ib.studentEmail}</td>
+            <td>${ib.bookTitle}</td>
+            <td>${ib.issueDate}</td>
+            <td>${ib.returnDate || "-"}</td>
+            <td>${ib.status}</td>
+          </tr>`;
+      });
+    }
+
+    // Issue Book
+    document.getElementById("issueForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const studentEmail = studentSelect.value;
+      const studentName = studentSelect.options[studentSelect.selectedIndex].text;
+      const bookId = bookSelect.value;
+      const bookTitle = bookSelect.options[bookSelect.selectedIndex].text;
+      const issueDate = document.getElementById("issueDate").value;
+
+      await addDoc(collection(db, "issuedBooks"), {
+        studentEmail, studentName,
+        bookId, bookTitle,
+        issueDate,
+        returnDate: null,
+        status: "Issued"
+      });
+
+      await updateDoc(doc(db, "books", bookId), { status: "Issued" });
+
+      loadBooks();
+      loadIssuedBooks();
+    });
+
+    // Return Book
+    document.getElementById("returnForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const issuedId = issuedSelect.value;
+      const returnDate = document.getElementById("returnDate").value;
+
+      const issuedDoc = doc(db, "issuedBooks", issuedId);
+      const issuedSnap = await getDoc(issuedDoc);
+
+      if (issuedSnap.exists()) {
+        const issuedData = issuedSnap.data();
+        await updateDoc(issuedDoc, {
+          returnDate,
+          status: "Returned"
+        });
+
+        await updateDoc(doc(db, "books", issuedData.bookId), { status: "Available" });
+      }
+
+      loadBooks();
+      loadIssuedBooks();
+    });
+
+    // Load on page start
+    loadStudents();
+    loadBooks();
+    loadIssuedBooks();
+  </script>
+</body>
+</html>

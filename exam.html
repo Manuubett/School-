@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Management</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+  <div class="container mt-4">
+    <h2 class="text-center mb-4">📝 Exam Management</h2>
+
+    <!-- Add Exam Form -->
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">Add Exam Result</div>
+      <div class="card-body">
+        <form id="examForm">
+          <div class="mb-3">
+            <label class="form-label">Select Student</label>
+            <select id="studentSelect" class="form-control" required></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Course</label>
+            <input type="text" id="course" class="form-control" placeholder="Enter course name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Score</label>
+            <input type="number" id="score" class="form-control" placeholder="Enter score" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Grade</label>
+            <input type="text" id="grade" class="form-control" placeholder="Enter grade e.g. A, B+" required>
+          </div>
+          <button type="submit" class="btn btn-success">Add Exam</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Exam Records Table -->
+    <div class="card">
+      <div class="card-header bg-info text-white">All Exam Records</div>
+      <div class="card-body">
+        <table class="table table-bordered table-striped">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Course</th>
+              <th>Score</th>
+              <th>Grade</th>
+            </tr>
+          </thead>
+          <tbody id="examTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { 
+      getFirestore, collection, getDocs, addDoc 
+    } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdabXqlBQ-6yVNJKdu8Zhb9Cm_-59_u24",
+      authDomain: "bett-294a2.firebaseapp.com",
+      projectId: "bett-294a2",
+      storageBucket: "bett-294a2.appspot.com",
+      messagingSenderId: "1055511650032",
+      appId: "1:1055511650032:web:7e0f9c28e58515f549ac35"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const studentSelect = document.getElementById("studentSelect");
+    const examTable = document.getElementById("examTable");
+
+    // Load Students
+    async function loadStudents() {
+      const snap = await getDocs(collection(db, "students"));
+      studentSelect.innerHTML = "";
+      snap.forEach(d => {
+        const s = d.data();
+        studentSelect.innerHTML += `<option value="${s.email}">${s.name} (${s.email})</option>`;
+      });
+    }
+
+    // Load Exams
+    async function loadExams() {
+      const snap = await getDocs(collection(db, "exams"));
+      examTable.innerHTML = "";
+      snap.forEach(d => {
+        const ex = d.data();
+        examTable.innerHTML += `
+          <tr>
+            <td>${ex.studentName} (${ex.studentEmail})</td>
+            <td>${ex.course}</td>
+            <td>${ex.score}</td>
+            <td>${ex.grade}</td>
+          </tr>`;
+      });
+    }
+
+    // Add Exam Record
+    document.getElementById("examForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const studentEmail = studentSelect.value;
+      const studentName = studentSelect.options[studentSelect.selectedIndex].text;
+      const course = document.getElementById("course").value;
+      const score = document.getElementById("score").value;
+      const grade = document.getElementById("grade").value;
+
+      await addDoc(collection(db, "exams"), {
+        studentEmail, studentName, course, score, grade
+      });
+
+      loadExams();
+    });
+
+    // Initialize
+    loadStudents();
+    loadExams();
+  </script>
+</body>
+</html>

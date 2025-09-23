@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>College SMS - Announcements</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+  <!-- Firebase v8 compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-light">
+
+  <div class="container mt-4">
+    <h2 class="text-center mb-4">📢 Announcements Management</h2>
+
+    <!-- Form for lecturers to post announcements -->
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">Post New Announcement</div>
+      <div class="card-body">
+        <form id="announcementForm">
+          <div class="mb-3">
+            <label class="form-label">Lecturer Name</label>
+            <input type="text" class="form-control" id="lecturer" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input type="text" class="form-control" id="title" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Message</label>
+            <textarea class="form-control" id="message" rows="3" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Target Audience</label>
+            <select class="form-control" id="audience" required>
+              <option value="all">All Students</option>
+              <option value="year1">Year 1</option>
+              <option value="year2">Year 2</option>
+              <option value="year3">Year 3</option>
+              <option value="year4">Year 4</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-success">Post Announcement</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Display all announcements -->
+    <div class="card">
+      <div class="card-header bg-secondary text-white">All Announcements</div>
+      <div class="card-body" id="announcementsList">
+        <p class="text-muted">No announcements yet...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdabXqlBQ-6yVNJKdu8Zhb9Cm_-59_u24",
+      authDomain: "bett-294a2.firebaseapp.com",
+      projectId: "bett-294a2",
+      storageBucket: "bett-294a2.appspot.com",
+      messagingSenderId: "1055511650032",
+      appId: "1:1055511650032:web:7e0f9c28e58515f549ac35"
+    };
+
+    // Init Firebase (compat)
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const form = document.getElementById("announcementForm");
+    const list = document.getElementById("announcementsList");
+
+    // Add new announcement
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const lecturer = document.getElementById("lecturer").value;
+      const title = document.getElementById("title").value;
+      const message = document.getElementById("message").value;
+      const audience = document.getElementById("audience").value;
+
+      await db.collection("announcements").add({
+        lecturer,
+        title,
+        message,
+        audience,
+        date: new Date().toISOString()
+      });
+
+      form.reset();
+      loadAnnouncements();
+    });
+
+    // Load announcements
+    async function loadAnnouncements() {
+      list.innerHTML = "";
+      const snapshot = await db.collection("announcements").orderBy("date", "desc").get();
+      if (snapshot.empty) {
+        list.innerHTML = "<p class='text-muted'>No announcements yet...</p>";
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const card = document.createElement("div");
+        card.className = "alert alert-info";
+        card.innerHTML = `
+          <h5>${data.title}</h5>
+          <p>${data.message}</p>
+          <small class="text-muted">
+            By: <strong>${data.lecturer}</strong> | Target: ${data.audience} | Date: ${new Date(data.date).toLocaleString()}
+          </small>`;
+        list.appendChild(card);
+      });
+    }
+
+    loadAnnouncements();
+  </script>
+</body>
+</html>
