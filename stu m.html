@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>College - Student Management</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f6f9; }
+    h2, h3 { color: #333; }
+    form { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    input, button { margin: 5px 0; padding: 10px; width: 100%; box-sizing: border-box; }
+    button { background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #007bff; color: white; }
+    td button { background: red; padding: 5px 10px; border: none; border-radius: 3px; color: white; cursor: pointer; }
+    td button:hover { background: darkred; }
+  </style>
+</head>
+<body>
+  <h2>🎓 Student Management</h2>
+
+  <!-- Student Form -->
+  <form id="studentForm">
+    <input type="text" id="name" placeholder="Full Name" required>
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="text" id="regNumber" placeholder="Reg Number" required>
+    <input type="text" id="program" placeholder="Program" required>
+    <input type="text" id="year" placeholder="Year (e.g. Year 1)" required>
+    <input type="text" id="phone" placeholder="Phone Number" required>
+    <button type="submit">➕ Add Student</button>
+  </form>
+
+  <!-- Search -->
+  <h3>🔍 Search Students</h3>
+  <input type="text" id="studentSearch" placeholder="Search by Name, Reg Number, or Program" style="width:100%; padding:10px; margin:10px 0;">
+
+  <!-- Student List -->
+  <h3>📋 All Students</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Reg Number</th>
+        <th>Program</th>
+        <th>Year</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="studentsTable"></tbody>
+  </table>
+
+  <!-- Firebase Script -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, remove } 
+      from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdabXqlBQ-6yVNJKdu8Zhb9Cm_-59_u24",
+      authDomain: "bett-294a2.firebaseapp.com",
+      databaseURL: "https://bett-294a2-default-rtdb.firebaseio.com",
+      projectId: "bett-294a2",
+      storageBucket: "bett-294a2.firebasestorage.app",
+      messagingSenderId: "1055511650032",
+      appId: "1:1055511650032:web:7e0f9c28e58515f549ac35",
+      measurementId: "G-MC0GRCLF1H"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const studentForm = document.getElementById("studentForm");
+    const studentsTable = document.getElementById("studentsTable");
+    const studentSearch = document.getElementById("studentSearch");
+
+    let allStudents = [];
+
+    // ➕ Add Student
+    studentForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const studentData = {
+        name: document.getElementById("name").value,
+        email: document.getElementById("email").value,
+        regNumber: document.getElementById("regNumber").value,
+        program: document.getElementById("program").value,
+        year: document.getElementById("year").value,
+        phone: document.getElementById("phone").value,
+      };
+      push(ref(db, "students"), studentData);
+      alert("✅ Student Added!");
+      studentForm.reset();
+    });
+
+    // 📡 Fetch Students
+    onValue(ref(db, "students"), (snapshot) => {
+      allStudents = [];
+      snapshot.forEach((child) => {
+        allStudents.push({ id: child.key, ...child.val() });
+      });
+      renderStudents(allStudents);
+    });
+
+    // 🔍 Search Filter
+    studentSearch.addEventListener("keyup", () => {
+      const searchText = studentSearch.value.toLowerCase();
+      const filtered = allStudents.filter(s =>
+        s.name.toLowerCase().includes(searchText) ||
+        s.regNumber.toLowerCase().includes(searchText) ||
+        s.program.toLowerCase().includes(searchText)
+      );
+      renderStudents(filtered);
+    });
+
+    // Render Table
+    function renderStudents(students) {
+      studentsTable.innerHTML = "";
+      students.forEach((s) => {
+        const row = `
+          <tr>
+            <td>${s.name}</td>
+            <td>${s.regNumber}</td>
+            <td>${s.program}</td>
+            <td>${s.year}</td>
+            <td>${s.email}</td>
+            <td>${s.phone}</td>
+            <td><button onclick="deleteStudent('${s.id}')">Delete</button></td>
+          </tr>`;
+        studentsTable.innerHTML += row;
+      });
+    }
+
+    // 🗑️ Delete Student
+    window.deleteStudent = (id) => {
+      remove(ref(db, "students/" + id));
+      alert("🗑️ Student Deleted!");
+    };
+  </script>
+</body>
+</html>

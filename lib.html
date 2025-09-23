@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Books Management</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+
+  <div class="container mt-4">
+    <h2 class="text-center mb-4">📚 Books Management</h2>
+
+    <!-- Add Book Form -->
+    <div class="card shadow p-3 mb-4">
+      <h5>Add / Update Book</h5>
+      <form id="bookForm">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Book Title</label>
+            <input type="text" id="title" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Author</label>
+            <input type="text" id="author" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Category</label>
+            <input type="text" id="category" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">ISBN</label>
+            <input type="text" id="isbn" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Quantity</label>
+            <input type="number" id="quantity" class="form-control" required>
+          </div>
+        </div>
+        <input type="hidden" id="bookId">
+        <button type="submit" class="btn btn-success mt-3">Save Book</button>
+      </form>
+    </div>
+
+    <!-- Books List -->
+    <div class="card shadow p-3">
+      <h5>Books List</h5>
+      <table class="table table-bordered mt-3">
+        <thead>
+          <tr class="table-dark">
+            <th>Title</th>
+            <th>Author</th>
+            <th>Category</th>
+            <th>ISBN</th>
+            <th>Quantity</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="booksTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import Firebase SDK (v9 modular)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { 
+      getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc 
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdabXqlBQ-6yVNJKdu8Zhb9Cm_-59_u24",
+      authDomain: "bett-294a2.firebaseapp.com",
+      projectId: "bett-294a2",
+      storageBucket: "bett-294a2.appspot.com",
+      messagingSenderId: "1055511650032",
+      appId: "1:1055511650032:web:7e0f9c28e58515f549ac35"
+    };
+
+    // Init Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const bookForm = document.getElementById('bookForm');
+    const booksTable = document.getElementById('booksTable');
+    const bookIdInput = document.getElementById('bookId');
+
+    // Add or Update Book
+    bookForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const author = document.getElementById('author').value;
+      const category = document.getElementById('category').value;
+      const isbn = document.getElementById('isbn').value;
+      const quantity = parseInt(document.getElementById('quantity').value);
+
+      if (bookIdInput.value) {
+        // Update existing
+        const bookRef = doc(db, "books", bookIdInput.value);
+        await updateDoc(bookRef, { title, author, category, isbn, quantity });
+        alert("Book updated successfully!");
+      } else {
+        // Add new
+        await addDoc(collection(db, "books"), { title, author, category, isbn, quantity });
+        alert("Book added successfully!");
+      }
+      bookForm.reset();
+      bookIdInput.value = "";
+      loadBooks();
+    });
+
+    // Load Books
+    async function loadBooks() {
+      booksTable.innerHTML = "";
+      const snapshot = await getDocs(collection(db, "books"));
+      snapshot.forEach(docSnap => {
+        const book = docSnap.data();
+        booksTable.innerHTML += `
+          <tr>
+            <td>${book.title}</td>
+            <td>${book.author}</td>
+            <td>${book.category}</td>
+            <td>${book.isbn || '-'}</td>
+            <td>${book.quantity}</td>
+            <td>
+              <button class="btn btn-sm btn-primary" onclick="editBook('${docSnap.id}','${book.title}','${book.author}','${book.category}','${book.isbn || ''}','${book.quantity}')">Edit</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteBook('${docSnap.id}')">Delete</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    // Expose functions to window
+    window.editBook = (id, title, author, category, isbn, quantity) => {
+      document.getElementById('title').value = title;
+      document.getElementById('author').value = author;
+      document.getElementById('category').value = category;
+      document.getElementById('isbn').value = isbn;
+      document.getElementById('quantity').value = quantity;
+      bookIdInput.value = id;
+    };
+
+    window.deleteBook = async (id) => {
+      if (confirm("Are you sure you want to delete this book?")) {
+        await deleteDoc(doc(db, "books", id));
+        loadBooks();
+      }
+    };
+
+    // Initial load
+    loadBooks();
+  </script>
+</body>
+</html>

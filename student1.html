@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+  <div class="container mt-4">
+    <h2 class="text-center mb-4">🎓 Student Dashboard</h2>
+    <p class="text-center text-muted">Welcome, <span id="studentEmail"></span></p>
+
+    <!-- Announcements -->
+    <div class="card mb-4">
+      <div class="card-header bg-warning text-dark">📢 Announcements</div>
+      <div class="card-body">
+        <ul id="announcementsList" class="list-group"></ul>
+      </div>
+    </div>
+
+    <!-- Fee Records -->
+    <div class="card mb-4">
+      <div class="card-header bg-info text-white">💰 Your Fee Records</div>
+      <div class="card-body">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Fee Type</th>
+              <th>Amount</th>
+              <th>Due Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="feeTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Exam Results -->
+    <div class="card mb-4">
+      <div class="card-header bg-success text-white">📝 Exam Results</div>
+      <div class="card-body">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>Score</th>
+              <th>Grade</th>
+            </tr>
+          </thead>
+          <tbody id="examTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Borrowed Books -->
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">📚 Borrowed Books</div>
+      <div class="card-body">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Book Title</th>
+              <th>Issue Date</th>
+              <th>Return Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="bookTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { 
+      getFirestore, collection, query, where, getDocs 
+    } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdabXqlBQ-6yVNJKdu8Zhb9Cm_-59_u24",
+      authDomain: "bett-294a2.firebaseapp.com",
+      projectId: "bett-294a2",
+      storageBucket: "bett-294a2.appspot.com",
+      messagingSenderId: "1055511650032",
+      appId: "1:1055511650032:web:7e0f9c28e58515f549ac35"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const studentEmailEl = document.getElementById("studentEmail");
+    const feeTable = document.getElementById("feeTable");
+    const examTable = document.getElementById("examTable");
+    const bookTable = document.getElementById("bookTable");
+    const announcementsList = document.getElementById("announcementsList");
+
+    // Load Student Data After Login
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const email = user.email;
+        studentEmailEl.textContent = email;
+
+        // Fetch Announcements (Public for all students)
+        const annSnap = await getDocs(collection(db, "announcements"));
+        announcementsList.innerHTML = "";
+        annSnap.forEach(d => {
+          const a = d.data();
+          announcementsList.innerHTML += `<li class="list-group-item">${a.title} - ${a.message}</li>`;
+        });
+
+        // Fetch Fee Records
+        const feeQ = query(collection(db, "fees"), where("studentEmail", "==", email));
+        const feeSnap = await getDocs(feeQ);
+        feeTable.innerHTML = "";
+        feeSnap.forEach(d => {
+          const f = d.data();
+          feeTable.innerHTML += `
+            <tr>
+              <td>${f.feeType}</td>
+              <td>${f.amount}</td>
+              <td>${f.dueDate}</td>
+              <td>${f.status}</td>
+            </tr>`;
+        });
+
+        // Fetch Exam Results
+        const examQ = query(collection(db, "exams"), where("studentEmail", "==", email));
+        const examSnap = await getDocs(examQ);
+        examTable.innerHTML = "";
+        examSnap.forEach(d => {
+          const ex = d.data();
+          examTable.innerHTML += `
+            <tr>
+              <td>${ex.course}</td>
+              <td>${ex.score}</td>
+              <td>${ex.grade}</td>
+            </tr>`;
+        });
+
+        // Fetch Borrowed Books
+        const bookQ = query(collection(db, "issuedBooks"), where("studentEmail", "==", email));
+        const bookSnap = await getDocs(bookQ);
+        bookTable.innerHTML = "";
+        bookSnap.forEach(d => {
+          const b = d.data();
+          bookTable.innerHTML += `
+            <tr>
+              <td>${b.bookTitle}</td>
+              <td>${b.issueDate}</td>
+              <td>${b.returnDate || "Not Returned"}</td>
+              <td>${b.status}</td>
+            </tr>`;
+        });
+      } else {
+        alert("Please login first!");
+        window.location.href = "school log.html"; // redirect to login page
+      }
+    });
+  </script>
+</body>
+</html>
