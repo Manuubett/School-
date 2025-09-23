@@ -132,9 +132,9 @@
         if (userDoc.exists()) {
           const role = userDoc.data().role;
           if (role === "student") window.location.href = "student1.html";
-          else if (role === "staff") window.location.href = "staff.html";
-          else if (role === "lecturer") window.location.href = "lecture.html";
-          else if (role === "admin") window.location.href = "admin.html";
+          else if (role === "staff") window.location.href = "staff page.html";
+          else if (role === "lecturer") window.location.href = "lec.html";
+          else if (role === "admin") window.location.href = "admin1.html";
         } else {
           alert("No role assigned!");
         }
@@ -155,4 +155,4 @@
     window.toggleForm = toggleForm;
   </script>
 </body>
-</html>
+  </html>
